@@ -36,6 +36,16 @@ def is_ahead(repo_path: str) -> bool:
         return False
     return int(result.stdout.strip() or 0) > 0
 
+
+def get_remote_url(repo_path: str, remote: str = "origin") -> str:
+    result = subprocess.run(
+        ["git", "remote", "get-url", remote],
+        cwd=repo_path,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
 def stage_all(repo_path: str) -> None:
     subprocess.run(["git", "add", "-A"], check=True, cwd=repo_path)
 
@@ -45,6 +55,14 @@ def commit(repo_path: str, message: str) -> None:
 
 
 def push(repo_path: str) -> None:
+    url = get_remote_url(repo_path)
+    if url.startswith("https://"):
+        print(
+            f"    [WARNING] skipping push in {repo_path}: remote is HTTPS ({url}).\n"
+            f"    Fix with: git remote set-url origin git@github.com:<user>/<repo>.git",
+            file=sys.stderr,
+        )
+        return
     result = subprocess.run(
         ["git", "push"],
         cwd=repo_path,
