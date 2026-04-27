@@ -1,4 +1,5 @@
 import subprocess
+import sys
 
 
 def is_git_repo(repo_path: str) -> bool:
@@ -20,6 +21,20 @@ def is_dirty(repo_path: str) -> bool:
         text=True,
     )
     return bool(result.stdout.strip())
+
+
+def is_ahead(repo_path: str) -> bool:
+    """Return True if local branch has commits not yet pushed to the remote."""
+    result = subprocess.run(
+        ["git", "rev-list", "--count", "@{u}..HEAD"],
+        cwd=repo_path,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        # No upstream configured -- nothing to push
+        return False
+    return int(result.stdout.strip() or 0) > 0
 
 def stage_all(repo_path: str) -> None:
     subprocess.run(["git", "add", "-A"], check=True, cwd=repo_path)
