@@ -25,23 +25,38 @@ class ProgressBar:
     """
 
     def __init__(self, label: str, min: int = 0, max: int = 100, units: str = ''):
-        self._label = label
-        self._min   = min
-        self._max   = max
-        self._units = units
-        self._tty   = sys.stdout.isatty()
+        self._label          = label
+        self._min            = min
+        self._max            = max
+        self._units          = units
+        self._tty            = sys.stdout.isatty()
+        self._last_milestone = -1  # tracks last non-TTY milestone printed (0=25%, 1=50%, 2=75%)
 
     def update(self, current: int, task: str = '') -> None:
-        if not self._tty:
+        if self._tty:
+            sys.stdout.write('\r' + self._render(current, task) + _ERASE)
+            sys.stdout.flush()
             return
-        sys.stdout.write('\r' + self._render(current, task) + _ERASE)
-        sys.stdout.flush()
+        # Non-TTY: print at 25%, 50%, 75% milestones
+        span = self._max - self._min
+        if span <= 0:
+            return
+        pct       = (current - self._min) / span
+        milestone = int(pct * 4)  # 0->0%, 1->25%, 2->50%, 3->75%, 4->100%
+        if 1 <= milestone <= 3 and milestone > self._last_milestone:
+            self._last_milestone = milestone
+            label = self._label.strip()
+            units = f' {self._units}' if self._units else ''
+            print(f'  {label}  {milestone * 25}%  ({current}/{self._max}{units})', flush=True)
 
     def done(self, task: str = '') -> None:
-        if not self._tty:
-            return
-        sys.stdout.write('\r' + self._render(self._max, task) + _ERASE + '\n')
-        sys.stdout.flush()
+        if self._tty:
+            sys.stdout.write('\r' + self._render(self._max, task) + _ERASE + '\n')
+            sys.stdout.flush()
+        else:
+            label = self._label.strip()
+            units = f' {self._units}' if self._units else ''
+            print(f'  {label}  100%  ({self._max}/{self._max}{units})', flush=True)
 
     def _render(self, current: int, task: str) -> str:
         span = self._max - self._min
