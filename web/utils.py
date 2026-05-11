@@ -33,6 +33,28 @@ def download_html(url, save_path):
         print(f"Error downloading {url}: {e}")
         return False
 
+
+def download_binary(url, save_path, chunk_size=8192):
+    """Download binary content (images, etc.) and save to `save_path`.
+
+    Returns True on success, False on failure.
+    """
+    try:
+        resp = requests.get(url, stream=True)
+        resp.raise_for_status()
+
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
+        with open(save_path, 'wb') as f:
+            for chunk in resp.iter_content(chunk_size):
+                if chunk:  # filter out keep-alive chunks
+                    f.write(chunk)
+
+        return True
+    except requests.RequestException as e:
+        print(f"Error downloading binary {url}: {e}")
+        return False
+
 def get_filename_from_url(url):
     """
     Extract filename from URL.
